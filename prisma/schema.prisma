@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Fandom {
+  id         Int         @id @default(autoincrement())
+  name       String      @unique
+  nameNorm   String      @unique
+  createdAt  DateTime    @default(now())
+  characters Character[]
+}
+
+model Character {
+  id            Int               @id @default(autoincrement())
+  fandomId      Int
+  canonicalName String
+  createdAt     DateTime          @default(now())
+  fandom        Fandom            @relation(fields: [fandomId], references: [id], onDelete: Cascade)
+  aliases       CharacterAlias[]
+  submissions   SubmissionEntry[]
+
+  @@unique([fandomId, canonicalName])
+}
+
+model CharacterAlias {
+  id          Int       @id @default(autoincrement())
+  characterId Int
+  alias       String
+  aliasNorm   String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([characterId, aliasNorm])
+}
+
+model Submission {
+  id           Int               @id @default(autoincrement())
+  ipHash       String
+  socialHandle String?
+  createdAt    DateTime          @default(now())
+  entries      SubmissionEntry[]
+}
+
+model SubmissionEntry {
+  id                Int        @id @default(autoincrement())
+  submissionId      Int
+  rank              Int
+  rawFandomInput    String
+  rawCharacterInput String
+  characterId       Int?
+  submission        Submission @relation(fields: [submissionId], references: [id])
+  character         Character? @relation(fields: [characterId], references: [id])
+}
