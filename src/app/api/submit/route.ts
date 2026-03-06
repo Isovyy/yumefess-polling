@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { normalizeFandom, normalizeCharacter } from '@/lib/normalize'
 import crypto from 'crypto'
 
+export const dynamic = 'force-dynamic'
+
 async function resolveFandom(rawInput: string) {
   const norm = normalizeFandom(rawInput)
   if (!norm) return null

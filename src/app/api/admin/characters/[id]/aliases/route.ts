@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { normalizeCharacter, normalizeFandom } from '@/lib/normalize'
 
+export const dynamic = 'force-dynamic'
+
 // Add an alias to a character, and retroactively resolve matching unresolved entries
 export async function POST(
   req: NextRequest,

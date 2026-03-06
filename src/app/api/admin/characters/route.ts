@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { normalizeCharacter } from '@/lib/normalize'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   const fandomId = req.nextUrl.searchParams.get('fandomId')
   if (!fandomId) return NextResponse.json([])

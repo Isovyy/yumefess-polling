@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { normalizeFandom, normalizeCharacter } from '@/lib/normalize'
 
+export const dynamic = 'force-dynamic'
+
 // Create a new fandom+character from an unresolved entry, then resolve all matching entries
 export async function POST(req: NextRequest) {
   const { rawFandomInput, rawCharacterInput } = await req.json()
