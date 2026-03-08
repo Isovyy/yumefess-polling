@@ -5,9 +5,12 @@ import { useRouter } from 'next/navigation'
 import {
   PieChart,
   Pie,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
   Cell,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts'
 
@@ -43,6 +46,7 @@ interface StatsData {
 interface RawBreakdown {
   input: string
   count: number
+  entryIds: number[]
 }
 
 interface Unresolved {
@@ -61,6 +65,7 @@ interface AdminFandom {
   id: number
   name: string
   nameNorm: string
+  aliases: { id: number; alias: string; aliasNorm: string }[]
 }
 
 // ---------------------------------------------------------------------------
@@ -74,46 +79,204 @@ const COLORS = [
 // ---------------------------------------------------------------------------
 // Stats tab
 // ---------------------------------------------------------------------------
-function OverviewPieChart({ title, data }: { title: string; data: OverallEntry[] }) {
+type ChartType = 'pie' | 'bar'
+
+function FandomChart({ data, chartType }: { data: { name: string; value: number }[]; chartType: ChartType }) {
+  const [showAll, setShowAll] = useState(false)
   if (data.length === 0) return null
+  const sorted = [...data].sort((a, b) => b.value - a.value)
+
+  if (chartType === 'bar') {
+    const displayData = showAll ? sorted : sorted.slice(0, FANDOM_BAR_LIMIT)
+    const barHeight = Math.max(displayData.length * 36, 80)
+    const labelWidth = Math.min(Math.max(...displayData.map((d) => d.name.length)) * 6.5, 160)
+    return (
+      <div>
+        <ResponsiveContainer width="100%" height={barHeight}>
+          <BarChart layout="vertical" data={displayData} margin={{ left: 4, right: 24, top: 0, bottom: 0 }}>
+            <XAxis type="number" hide />
+            <YAxis
+              type="category"
+              dataKey="name"
+              width={labelWidth}
+              tick={{ fontSize: 11, fill: '#6b7280' }}
+              tickLine={false}
+              axisLine={false}
+            />
+            <Tooltip formatter={(v: number) => [`${v} votes`]} />
+            <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+              {displayData.map((_, i) => (
+                <Cell key={i} fill={COLORS[i % COLORS.length]} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+        {sorted.length > FANDOM_BAR_LIMIT && (
+          <button
+            onClick={() => setShowAll((v) => !v)}
+            className="mt-2 text-xs text-teal-400 hover:text-teal-600 transition"
+          >
+            {showAll ? `Show top ${FANDOM_BAR_LIMIT}` : `Show all ${sorted.length}`}
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  // No legend inside — the sorted list below the chart already shows all names + votes
+  return (
+    <ResponsiveContainer width="100%" height={240}>
+      <PieChart>
+        <Pie
+          data={sorted}
+          cx="50%"
+          cy="50%"
+          innerRadius={60}
+          outerRadius={100}
+          paddingAngle={2}
+          dataKey="value"
+          label={({ percent }) => `${Math.round(percent * 100)}%`}
+          labelLine={false}
+        >
+          {sorted.map((_, i) => (
+            <Cell key={i} fill={COLORS[i % COLORS.length]} />
+          ))}
+        </Pie>
+        <Tooltip formatter={(v: number, _n, props) => [`${v} votes`, props.payload?.name ?? '']} />
+      </PieChart>
+    </ResponsiveContainer>
+  )
+}
+
+const PIE_LIMIT = 10
+const BAR_LIMIT = 20
+const FANDOM_BAR_LIMIT = 20
+
+function capData(sorted: OverallEntry[], limit: number) {
+  if (sorted.length <= limit) return { capped: sorted, othersCount: 0, othersVotes: 0 }
+  const top = sorted.slice(0, limit)
+  const rest = sorted.slice(limit)
+  const othersVotes = rest.reduce((s, d) => s + d.value, 0)
+  return { capped: top, othersCount: rest.length, othersVotes }
+}
+
+function OverallChart({ title, data, chartType }: { title: string; data: OverallEntry[]; chartType: ChartType }) {
+  const [showAll, setShowAll] = useState(false)
+  if (data.length === 0) return null
+  const sorted = [...data].sort((a, b) => b.value - a.value)
+  const limit = chartType === 'pie' ? PIE_LIMIT : BAR_LIMIT
+  const { capped, othersCount, othersVotes } = capData(sorted, showAll ? sorted.length : limit)
+
+  const displayData = !showAll && othersCount > 0
+    ? [...capped, { name: `Others (${othersCount} more)`, value: othersVotes }]
+    : capped
+
+  if (chartType === 'bar') {
+    const barHeight = Math.max(displayData.length * 36, 80)
+    const barData = displayData.map((d) => ({
+      ...d,
+      label: d.fandom ? `${d.name} (${d.fandom})` : d.name,
+    }))
+    const labelWidth = Math.min(
+      Math.max(...barData.map((d) => d.label.length)) * 6.5,
+      200
+    )
+    return (
+      <div className="bg-white rounded-2xl border border-teal-100 p-5 shadow-sm">
+        <div className="flex justify-between items-baseline mb-3">
+          <h3 className="font-bold text-gray-700">{title}</h3>
+          <div className="flex items-center gap-3">
+            {sorted.length > BAR_LIMIT && (
+              <button
+                onClick={() => setShowAll((v) => !v)}
+                className="text-xs text-teal-400 hover:text-teal-600 transition"
+              >
+                {showAll ? `Show top ${BAR_LIMIT}` : `Show all ${sorted.length}`}
+              </button>
+            )}
+            {!showAll && othersCount > 0 && (
+              <span className="text-xs text-gray-400">Top {BAR_LIMIT} of {sorted.length}</span>
+            )}
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={barHeight}>
+          <BarChart layout="vertical" data={barData} margin={{ left: 4, right: 24, top: 0, bottom: 0 }}>
+            <XAxis type="number" hide />
+            <YAxis
+              type="category"
+              dataKey="label"
+              width={labelWidth}
+              tick={{ fontSize: 11, fill: '#6b7280' }}
+              tickLine={false}
+              axisLine={false}
+            />
+            <Tooltip formatter={(v: number) => [`${v} votes`]} />
+            <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+              {barData.map((_, i) => (
+                <Cell key={i} fill={i < COLORS.length ? COLORS[i] : '#d1d5db'} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    )
+  }
+
   return (
     <div className="bg-white rounded-2xl border border-teal-100 p-5 shadow-sm">
-      <h3 className="font-bold text-gray-700 mb-1">{title}</h3>
-      <ResponsiveContainer width="100%" height={280}>
+      <div className="flex justify-between items-baseline mb-1">
+        <h3 className="font-bold text-gray-700">{title}</h3>
+        {othersCount > 0 && (
+          <span className="text-xs text-gray-400">Top {PIE_LIMIT} of {sorted.length}</span>
+        )}
+      </div>
+      <ResponsiveContainer width="100%" height={240}>
         <PieChart>
           <Pie
-            data={data}
+            data={displayData}
             cx="50%"
             cy="50%"
             innerRadius={55}
             outerRadius={95}
             paddingAngle={2}
             dataKey="value"
+            label={({ percent }) => percent > 0.03 ? `${Math.round(percent * 100)}%` : ''}
+            labelLine={false}
           >
-            {data.map((_, i) => (
-              <Cell key={i} fill={COLORS[i % COLORS.length]} />
+            {displayData.map((_, i) => (
+              <Cell key={i} fill={i < COLORS.length ? COLORS[i] : '#d1d5db'} />
             ))}
           </Pie>
           <Tooltip
-            formatter={(v: number, _name: string, props) => {
+            formatter={(v: number, _n, props) => {
               const entry = props.payload as OverallEntry
               return [`${v} votes`, entry.fandom ? `${entry.name} (${entry.fandom})` : entry.name]
             }}
           />
-          <Legend formatter={(_value, props) => {
-            const entry = props.payload as unknown as OverallEntry
-            return entry.fandom ? `${entry.name} (${entry.fandom})` : entry.name
-          }} />
         </PieChart>
       </ResponsiveContainer>
+      {/* Custom legend outside the chart — always bounded */}
+      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-3">
+        {displayData.map((d, i) => {
+          const label = d.fandom ? `${d.name} (${d.fandom})` : d.name
+          return (
+            <span key={i} className="flex items-center gap-1 text-xs text-gray-600">
+              <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: i < COLORS.length ? COLORS[i] : '#d1d5db' }} />
+              {label} <span className="text-gray-400">{d.value}</span>
+            </span>
+          )
+        })}
+      </div>
     </div>
   )
 }
 
-function StatsTab({ stats }: { stats: StatsData }) {
+function StatsTab({ stats, onStatsChange }: { stats: StatsData; onStatsChange: () => void }) {
   const [expanded, setExpanded] = useState<number | null>(null)
   const [breakdown, setBreakdown] = useState<RawBreakdown[]>([])
   const [loadingBreakdown, setLoadingBreakdown] = useState(false)
+  const [unresolving, setUnresolving] = useState<string | null>(null)
+  const [chartType, setChartType] = useState<ChartType>('bar')
 
   const loadBreakdown = async (characterId: number) => {
     if (expanded === characterId) {
@@ -125,6 +288,22 @@ function StatsTab({ stats }: { stats: StatsData }) {
     const res = await fetch(`/api/admin/stats/${characterId}`)
     setBreakdown(await res.json())
     setLoadingBreakdown(false)
+  }
+
+  const unresolveGroup = async (b: RawBreakdown) => {
+    if (!confirm(`Move ${b.count} vote${b.count > 1 ? 's' : ''} for "${b.input}" back to Unresolved?`)) return
+    setUnresolving(b.input)
+    await fetch('/api/admin/entries/unresolve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entryIds: b.entryIds }),
+    })
+    setUnresolving(null)
+    if (expanded !== null) {
+      const res = await fetch(`/api/admin/stats/${expanded}`)
+      setBreakdown(await res.json())
+    }
+    onStatsChange()
   }
 
   if (stats.totalSubmissions === 0) {
@@ -148,15 +327,30 @@ function StatsTab({ stats }: { stats: StatsData }) {
         </div>
       </div>
 
-      <OverviewPieChart title="Overall Characters" data={stats.topCharacters} />
-      <OverviewPieChart title="Overall Fandoms" data={stats.topFandoms} />
+      {/* Chart type toggle */}
+      <div className="flex gap-1 bg-teal-100 rounded-xl p-1 w-fit">
+        {(['bar', 'pie'] as ChartType[]).map((t) => (
+          <button
+            key={t}
+            onClick={() => setChartType(t)}
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition ${
+              chartType === t ? 'bg-white text-teal-500 shadow-sm' : 'text-teal-300 hover:text-teal-400'
+            }`}
+          >
+            {t === 'bar' ? 'Bar' : 'Pie'}
+          </button>
+        ))}
+      </div>
+
+      <OverallChart title="Overall Characters" data={stats.topCharacters} chartType={chartType} />
+      <OverallChart title="Overall Fandoms" data={stats.topFandoms} chartType={chartType} />
 
       {stats.fandoms.map((fandom) => {
-        const total = fandom.characters.reduce((s, c) => s + c.votes, 0)
-        if (fandom.characters.length === 0) return null
+        const sorted = [...fandom.characters].sort((a, b) => b.votes - a.votes)
+        const total = sorted.reduce((s, c) => s + c.votes, 0)
+        if (sorted.length === 0) return null
 
-        const pieData = fandom.characters
-          .map((c) => ({ name: c.name, value: c.votes }))
+        const chartData = sorted.map((c) => ({ name: c.name, value: c.votes }))
 
         return (
           <div key={fandom.id} className="bg-white rounded-2xl border border-teal-100 p-5 shadow-sm">
@@ -165,63 +359,56 @@ function StatsTab({ stats }: { stats: StatsData }) {
               <span className="text-xs text-gray-400">{total} votes</span>
             </div>
 
-            {pieData.length > 0 && (
-              <ResponsiveContainer width="100%" height={260}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {pieData.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(v: number) => [`${v} votes`, '']} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+            <FandomChart data={chartData} chartType={chartType} />
+
+            {/* Character list with raw breakdown drill-down — only shown in pie mode */}
+            {chartType === 'pie' && (
+              <div className="mt-4 space-y-1">
+                {sorted.map((c) => (
+                  <div key={c.id}>
+                    <button
+                      onClick={() => loadBreakdown(c.id)}
+                      className="w-full flex justify-between items-center px-3 py-2 rounded-lg hover:bg-teal-50 transition text-sm text-left"
+                    >
+                      <span className="text-gray-700">{c.name}</span>
+                      <span className="text-teal-400 font-semibold">{c.votes}</span>
+                    </button>
+
+                    {expanded === c.id && (
+                      <div className="ml-4 mt-1 mb-2 bg-teal-50 rounded-lg p-3">
+                        {loadingBreakdown ? (
+                          <p className="text-xs text-gray-400">Loading...</p>
+                        ) : breakdown.length === 0 ? (
+                          <p className="text-xs text-gray-400">No raw data.</p>
+                        ) : (
+                          <div className="space-y-1">
+                            <p className="text-xs font-semibold text-gray-500 mb-2">
+                              Raw inputs (exactly as typed):
+                            </p>
+                            {breakdown.map((b) => (
+                              <div key={b.input} className="flex justify-between items-center text-xs text-gray-600 gap-2">
+                                <span className="font-mono truncate">{b.input}</span>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className="text-teal-400">{b.count}</span>
+                                  <button
+                                    onClick={() => unresolveGroup(b)}
+                                    disabled={unresolving === b.input}
+                                    className="px-1.5 py-0.5 text-red-300 hover:text-red-500 border border-red-200 rounded text-xs transition disabled:opacity-40"
+                                    title="Move back to Unresolved"
+                                  >
+                                    {unresolving === b.input ? '...' : '↩'}
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
-
-            <div className="mt-4 space-y-1">
-              {fandom.characters.map((c) => (
-                <div key={c.id}>
-                  <button
-                    onClick={() => loadBreakdown(c.id)}
-                    className="w-full flex justify-between items-center px-3 py-2 rounded-lg hover:bg-teal-50 transition text-sm text-left"
-                  >
-                    <span className="text-gray-700">{c.name}</span>
-                    <span className="text-teal-400 font-semibold">{c.votes}</span>
-                  </button>
-
-                  {expanded === c.id && (
-                    <div className="ml-4 mt-1 mb-2 bg-teal-50 rounded-lg p-3">
-                      {loadingBreakdown ? (
-                        <p className="text-xs text-gray-400">Loading...</p>
-                      ) : breakdown.length === 0 ? (
-                        <p className="text-xs text-gray-400">No raw data.</p>
-                      ) : (
-                        <div className="space-y-1">
-                          <p className="text-xs font-semibold text-gray-500 mb-2">
-                            Raw inputs (exactly as typed):
-                          </p>
-                          {breakdown.map((b) => (
-                            <div key={b.input} className="flex justify-between text-xs text-gray-600">
-                              <span className="font-mono">{b.input}</span>
-                              <span className="text-teal-400">{b.count}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
           </div>
         )
       })}
@@ -246,6 +433,9 @@ function ManageTab() {
   const [expandedChar, setExpandedChar] = useState<number | null>(null)
   const [newAlias, setNewAlias] = useState('')
   const [aliasMsg, setAliasMsg] = useState('')
+
+  const [newFandomAlias, setNewFandomAlias] = useState('')
+  const [fandomAliasMsg, setFandomAliasMsg] = useState('')
 
   const loadFandoms = useCallback(async () => {
     const res = await fetch('/api/admin/fandoms')
@@ -285,6 +475,37 @@ function ManageTab() {
     if (!confirm('Delete this fandom and all its characters?')) return
     await fetch(`/api/admin/fandoms/${id}`, { method: 'DELETE' })
     if (selectedFandomId === id) setSelectedFandomId(null)
+    loadFandoms()
+  }
+
+  const addFandomAlias = async (fandomId: number) => {
+    setFandomAliasMsg('')
+    if (!newFandomAlias.trim()) return
+    const res = await fetch(`/api/admin/fandoms/${fandomId}/aliases`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ alias: newFandomAlias.trim() }),
+    })
+    const d = await res.json()
+    if (res.ok) {
+      setNewFandomAlias('')
+      setFandomAliasMsg(
+        d.resolved > 0
+          ? `Alias added! Also resolved ${d.resolved} existing entry/entries.`
+          : 'Alias added. Future entries with this fandom name will resolve automatically.'
+      )
+      loadFandoms()
+    } else {
+      setFandomAliasMsg(d.error)
+    }
+  }
+
+  const deleteFandomAlias = async (fandomId: number, aliasId: number) => {
+    await fetch(`/api/admin/fandoms/${fandomId}/aliases`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ aliasId }),
+    })
     loadFandoms()
   }
 
@@ -345,6 +566,8 @@ function ManageTab() {
     if (selectedFandomId) loadCharacters(selectedFandomId)
   }
 
+  const selectedFandom = fandoms.find((f) => f.id === selectedFandomId)
+
   return (
     <div className="space-y-6">
       {/* Add fandom */}
@@ -387,6 +610,9 @@ function ManageTab() {
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className={`text-xs transition-transform duration-150 ${selectedFandomId === f.id ? 'rotate-90' : ''} text-teal-300`}>›</span>
                     <span className="text-sm truncate">{f.name}</span>
+                    {f.aliases.length > 0 && (
+                      <span className="text-xs text-teal-300 shrink-0">({f.aliases.length} alt name{f.aliases.length > 1 ? 's' : ''})</span>
+                    )}
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); deleteFandom(f.id) }}
@@ -396,11 +622,58 @@ function ManageTab() {
                   </button>
                 </div>
 
-                {/* Inline character panel */}
+                {/* Inline fandom+character panel */}
                 {selectedFandomId === f.id && (
-                  <div className="border-t border-teal-100 bg-teal-50 px-4 py-4 space-y-3">
+                  <div className="border-t border-teal-100 bg-teal-50 px-4 py-4 space-y-4">
+                    {/* Fandom aliases (alternate names like MLQC / Love and Producer) */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-teal-600 uppercase tracking-wide">Alternate Fandom Names</p>
+                      <p className="text-xs text-gray-400">
+                        Add alternate names for this fandom (e.g. &ldquo;Love and Producer&rdquo; for MLQC). Entries typed with these names will resolve to this fandom&apos;s characters.
+                      </p>
+                      {f.aliases.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {f.aliases.map((a) => (
+                            <span
+                              key={a.id}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-teal-200 rounded-full text-xs text-gray-600"
+                            >
+                              {a.alias}
+                              <button
+                                onClick={() => deleteFandomAlias(f.id, a.id)}
+                                className="text-gray-300 hover:text-red-400 leading-none"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <input
+                          value={newFandomAlias}
+                          onChange={(e) => setNewFandomAlias(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && addFandomAlias(f.id)}
+                          placeholder={`Alternate name for "${f.name}"`}
+                          className="flex-1 px-2 py-1.5 border border-teal-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal-300 bg-white"
+                        />
+                        <button
+                          onClick={() => addFandomAlias(f.id)}
+                          className="px-3 py-1.5 bg-teal-400 hover:bg-teal-500 text-white rounded-lg text-xs font-semibold transition"
+                        >
+                          Add
+                        </button>
+                      </div>
+                      {fandomAliasMsg && selectedFandom?.id === f.id && (
+                        <p className="text-xs text-green-600">{fandomAliasMsg}</p>
+                      )}
+                    </div>
+
+                    <div className="border-t border-teal-200" />
+
                     {/* Add character */}
                     <div className="space-y-2">
+                      <p className="text-xs font-semibold text-teal-600 uppercase tracking-wide">Characters</p>
                       <input
                         value={newCharName}
                         onChange={(e) => setNewCharName(e.target.value)}
@@ -508,6 +781,7 @@ function UnresolvedTab() {
   const [unresolved, setUnresolved] = useState<Unresolved[]>([])
   const [loading, setLoading] = useState(true)
   const [resolving, setResolving] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
   const [msg, setMsg] = useState('')
 
   // "assign to existing" state
@@ -542,28 +816,28 @@ function UnresolvedTab() {
     setAssignChars(await res.json())
   }
 
-  const assignToExisting = async (rawCharacterInput: string) => {
+  const assignToExisting = async (u: Unresolved) => {
     if (!assignCharId) return
     setResolving(assignKey)
     setMsg('')
-    const res = await fetch(`/api/admin/characters/${assignCharId}/aliases`, {
+    const res = await fetch('/api/admin/unresolved/assign', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ alias: rawCharacterInput }),
+      body: JSON.stringify({
+        rawFandomInput: u.rawFandomInput,
+        rawCharacterInput: u.rawCharacterInput,
+        characterId: assignCharId,
+      }),
     })
     const d = await res.json()
     if (res.ok) {
       const charName = assignChars.find((c) => c.id === assignCharId)?.canonicalName ?? ''
       const fandomName = assignFandoms.find((f) => f.id === assignFandomId)?.name ?? ''
-      setMsg(
-        d.resolved > 0
-          ? `Assigned to "${charName}" (${fandomName}) and resolved ${d.resolved} entry/entries.`
-          : `Added alias to "${charName}" (${fandomName}). No entries resolved yet (fandom may not match).`
-      )
+      setMsg(`Assigned ${d.resolved} entry/entries to "${charName}" (${fandomName}).`)
       setAssignKey(null)
       load()
     } else {
-      setMsg(d.error ?? 'Error assigning alias.')
+      setMsg(d.error ?? 'Error assigning.')
     }
     setResolving(null)
   }
@@ -585,6 +859,27 @@ function UnresolvedTab() {
     setResolving(null)
   }
 
+  const deleteEntry = async (u: Unresolved) => {
+    const key = `${u.rawFandomInput}::${u.rawCharacterInput}`
+    const warning =
+      `Delete ${u.count} vote${u.count > 1 ? 's' : ''} for "${u.rawCharacterInput}" (${u.rawFandomInput})?\n\n` +
+      `These entries are NOT in the database as a resolved character — they will be permanently removed and won't count in results.`
+    if (!confirm(warning)) return
+    setDeleting(key)
+    setMsg('')
+    const res = await fetch('/api/admin/unresolved', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rawFandomInput: u.rawFandomInput, rawCharacterInput: u.rawCharacterInput }),
+    })
+    const d = await res.json()
+    if (res.ok) {
+      setMsg(`Deleted ${d.deleted} unresolved entry/entries.`)
+      load()
+    }
+    setDeleting(null)
+  }
+
   if (loading) return <p className="text-gray-400 text-sm text-center py-10">Loading...</p>
 
   if (unresolved.length === 0) {
@@ -598,18 +893,20 @@ function UnresolvedTab() {
   return (
     <div className="space-y-3">
       <p className="text-xs text-gray-400">
-        These entries could not be matched to a known character. Add as new, or assign to an existing character as an alias.
+        These entries could not be matched to a known character. Add as new, assign to an existing character, or delete.
       </p>
       {msg && <p className="text-xs text-green-600 bg-green-50 px-3 py-2 rounded-lg">{msg}</p>}
       {unresolved.map((u, i) => {
         const key = `${u.rawFandomInput}::${u.rawCharacterInput}`
         const isAssigning = assignKey === key
+        const isDeleting = deleting === key
         return (
           <div key={i} className="bg-white rounded-xl border border-amber-100 shadow-sm overflow-hidden">
             <div className="px-4 py-3 flex justify-between items-center gap-3">
               <div className="min-w-0">
+                {/* FANDOM first, in caps */}
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide truncate">{u.rawFandomInput}</p>
                 <p className="text-sm font-medium text-gray-700 truncate">{u.rawCharacterInput}</p>
-                <p className="text-xs text-gray-400 truncate">{u.rawFandomInput}</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-amber-400 font-semibold text-sm">{u.count}×</span>
@@ -629,6 +926,13 @@ function UnresolvedTab() {
                   className="px-3 py-1 bg-teal-400 hover:bg-teal-500 text-white rounded-lg text-xs font-semibold transition disabled:opacity-50"
                 >
                   {resolving === key ? '...' : 'Add as new'}
+                </button>
+                <button
+                  onClick={() => deleteEntry(u)}
+                  disabled={isDeleting}
+                  className="px-3 py-1 bg-white border border-red-200 text-red-400 hover:bg-red-50 rounded-lg text-xs font-semibold transition disabled:opacity-50"
+                >
+                  {isDeleting ? '...' : 'Delete'}
                 </button>
               </div>
             </div>
@@ -659,7 +963,7 @@ function UnresolvedTab() {
                   </select>
                 )}
                 <button
-                  onClick={() => assignToExisting(u.rawCharacterInput)}
+                  onClick={() => assignToExisting(u)}
                   disabled={!assignCharId || resolving === key}
                   className="w-full py-1.5 bg-violet-500 hover:bg-violet-600 text-white rounded-lg text-xs font-semibold transition disabled:opacity-40"
                 >
@@ -697,14 +1001,29 @@ function ResponsesTab() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
+  const [unresolving, setUnresolving] = useState<number | null>(null)
   const pageSize = 50
 
-  useEffect(() => {
+  const loadPage = (p: number) => {
     setLoading(true)
-    fetch(`/api/admin/submissions?page=${page}`)
+    fetch(`/api/admin/submissions?page=${p}`)
       .then((r) => r.json())
       .then((d) => { setSubmissions(d.submissions); setTotal(d.total); setLoading(false) })
-  }, [page])
+  }
+
+  useEffect(() => { loadPage(page) }, [page])
+
+  const unresolveEntry = async (entryId: number, charName: string) => {
+    if (!confirm(`Move "${charName}" back to Unresolved? The vote will not be counted until it's reassigned.`)) return
+    setUnresolving(entryId)
+    await fetch('/api/admin/entries/unresolve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entryIds: [entryId] }),
+    })
+    setUnresolving(null)
+    loadPage(page)
+  }
 
   if (loading) return <p className="text-gray-400 text-sm text-center py-10">Loading...</p>
 
@@ -729,9 +1048,9 @@ function ResponsesTab() {
           </div>
           <div className="px-4 py-3 space-y-1.5">
             {s.entries.map((e) => (
-              <div key={e.id} className="flex gap-2 text-sm">
+              <div key={e.id} className="flex gap-2 items-center text-sm">
                 <span className="text-teal-300 font-semibold shrink-0">#{e.rank}</span>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   {e.character ? (
                     <span className="text-gray-700">
                       <span className="font-medium">{e.character.canonicalName}</span>
@@ -744,6 +1063,16 @@ function ResponsesTab() {
                     </span>
                   )}
                 </div>
+                {e.character && (
+                  <button
+                    onClick={() => unresolveEntry(e.id, e.character!.canonicalName)}
+                    disabled={unresolving === e.id}
+                    className="shrink-0 px-1.5 py-0.5 text-red-300 hover:text-red-500 border border-red-200 rounded text-xs transition disabled:opacity-40"
+                    title="Move back to Unresolved"
+                  >
+                    {unresolving === e.id ? '...' : '↩'}
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -816,6 +1145,13 @@ export default function AdminDashboard() {
         <h1 className="text-xl font-bold text-teal-500">Admin Dashboard</h1>
         <div className="flex items-center gap-3">
           <a
+            href="/api/admin/export"
+            download
+            className="text-xs text-teal-400 hover:text-teal-600 transition"
+          >
+            Export backup
+          </a>
+          <a
             href="/api/admin/export-seed"
             download="seed.js"
             className="text-xs text-teal-400 hover:text-teal-600 transition"
@@ -863,7 +1199,7 @@ export default function AdminDashboard() {
         loadingStats ? (
           <p className="text-gray-400 text-sm text-center py-10">Loading stats...</p>
         ) : stats ? (
-          <StatsTab stats={stats} />
+          <StatsTab stats={stats} onStatsChange={fetchStats} />
         ) : null
       )}
       {tab === 'manage' && <ManageTab />}

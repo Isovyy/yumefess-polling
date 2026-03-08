@@ -4,7 +4,10 @@ import { normalizeCharacter, normalizeFandom } from '@/lib/normalize'
 
 export const dynamic = 'force-dynamic'
 
-// Add an alias to a character, and retroactively resolve matching unresolved entries
+// Add an alias to a character, and retroactively resolve matching unresolved entries.
+// Matches entries where:
+//   - normalizeCharacter(rawCharacterInput) === aliasNorm
+//   - normalizeFandom(rawFandomInput) matches the character's fandom OR any of its fandom aliases
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -17,44 +20,55 @@ export async function POST(
 
   const aliasNorm = normalizeCharacter(alias)
 
-  try {
-    const created = await prisma.characterAlias.create({
+  // Check if alias already exists for a DIFFERENT character — that's a conflict
+  const existingAlias = await prisma.characterAlias.findFirst({
+    where: { aliasNorm },
+  })
+  if (existingAlias && existingAlias.characterId !== characterId) {
+    return NextResponse.json({ error: 'Alias already exists for a different character.' }, { status: 409 })
+  }
+
+  // Create alias if it doesn't exist yet (ignore if already on this character)
+  if (!existingAlias) {
+    await prisma.characterAlias.create({
       data: { characterId, alias: alias.trim(), aliasNorm },
     })
+  }
 
-    // Retroactively resolve unresolved entries that match this alias + fandom
-    const character = await prisma.character.findUnique({
-      where: { id: characterId },
-      include: { fandom: true },
+  // Always run resolution — covers the case where alias existed but entries weren't resolved yet
+  const character = await prisma.character.findUnique({
+    where: { id: characterId },
+    include: { fandom: { include: { aliases: true } } },
+  })
+
+  if (character) {
+    const fandomNorms = new Set([
+      normalizeFandom(character.fandom.name),
+      ...character.fandom.aliases.map((a) => a.aliasNorm),
+    ])
+
+    const unresolved = await prisma.submissionEntry.findMany({
+      where: { characterId: null },
+      select: { id: true, rawFandomInput: true, rawCharacterInput: true },
     })
 
-    if (character) {
-      const fandomNorm = normalizeFandom(character.fandom.name)
-      const unresolved = await prisma.submissionEntry.findMany({
-        where: { characterId: null },
-        select: { id: true, rawFandomInput: true, rawCharacterInput: true },
+    const toResolve = unresolved.filter(
+      (e) =>
+        normalizeCharacter(e.rawCharacterInput) === aliasNorm &&
+        fandomNorms.has(normalizeFandom(e.rawFandomInput))
+    )
+
+    if (toResolve.length > 0) {
+      await prisma.submissionEntry.updateMany({
+        where: { id: { in: toResolve.map((e) => e.id) } },
+        data: { characterId },
       })
-
-      const toResolve = unresolved.filter(
-        (e) =>
-          normalizeCharacter(e.rawCharacterInput) === aliasNorm &&
-          normalizeFandom(e.rawFandomInput) === fandomNorm
-      )
-
-      if (toResolve.length > 0) {
-        await prisma.submissionEntry.updateMany({
-          where: { id: { in: toResolve.map((e) => e.id) } },
-          data: { characterId },
-        })
-      }
-
-      return NextResponse.json({ ...created, resolved: toResolve.length })
     }
 
-    return NextResponse.json(created)
-  } catch {
-    return NextResponse.json({ error: 'Alias already exists for this character.' }, { status: 409 })
+    return NextResponse.json({ resolved: toResolve.length })
   }
+
+  return NextResponse.json({ resolved: 0 })
 }
 
 // Remove an alias

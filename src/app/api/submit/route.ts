@@ -8,7 +8,14 @@ export const dynamic = 'force-dynamic'
 async function resolveFandom(rawInput: string) {
   const norm = normalizeFandom(rawInput)
   if (!norm) return null
-  return prisma.fandom.findFirst({ where: { nameNorm: norm } })
+  const fandom = await prisma.fandom.findFirst({ where: { nameNorm: norm } })
+  if (fandom) return fandom
+  // Also check fandom aliases (e.g. "Love and Producer" resolves to MLQC)
+  const alias = await prisma.fandomAlias.findFirst({
+    where: { aliasNorm: norm },
+    include: { fandom: true },
+  })
+  return alias?.fandom ?? null
 }
 
 async function resolveCharacter(fandomId: number, rawInput: string) {

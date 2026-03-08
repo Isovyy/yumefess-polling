@@ -12,19 +12,23 @@ export async function GET(
 
   const entries = await prisma.submissionEntry.findMany({
     where: { characterId },
-    select: { rawCharacterInput: true },
+    select: { id: true, rawCharacterInput: true },
   })
 
-  // Count occurrences of each raw input (case-insensitive)
-  const counts = new Map<string, number>()
+  // Group by normalised raw input, collect entry IDs
+  const groups = new Map<string, { input: string; count: number; entryIds: number[] }>()
   for (const entry of entries) {
     const key = entry.rawCharacterInput.toLowerCase().trim()
-    counts.set(key, (counts.get(key) ?? 0) + 1)
+    const existing = groups.get(key)
+    if (existing) {
+      existing.count++
+      existing.entryIds.push(entry.id)
+    } else {
+      groups.set(key, { input: entry.rawCharacterInput, count: 1, entryIds: [entry.id] })
+    }
   }
 
   return NextResponse.json(
-    Array.from(counts.entries())
-      .map(([input, count]) => ({ input, count }))
-      .sort((a, b) => b.count - a.count)
+    Array.from(groups.values()).sort((a, b) => b.count - a.count)
   )
 }

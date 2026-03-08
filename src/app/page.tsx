@@ -9,7 +9,7 @@ export default function TermsPage() {
         <div className="flex justify-center mb-3">
           <Image src="/yumefess-icon.png" alt="Yumefess" width={80} height={80} />
         </div>
-        <h1 className="text-3xl font-bold text-teal-500 mb-1">Yumefess Oshi Polling 2026</h1>
+        <h1 className="text-3xl font-bold text-teal-500 mb-1">Yumefess Character Polling 2026</h1>
         <p className="text-gray-400 text-sm">Syarat dan Ketentuan</p>
       </div>
 

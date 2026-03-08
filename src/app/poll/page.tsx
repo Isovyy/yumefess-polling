@@ -322,8 +322,8 @@ export default function PollPage() {
         <div className="flex justify-center mb-3">
           <img src="/yumefess-icon.png" alt="Yumefess" className="w-20 h-20 object-contain" />
         </div>
-        <h1 className="text-4xl font-bold text-teal-500 mb-2">Yumefess Oshi Polling 2026</h1>
-        <p className="text-gray-400 text-sm">Who is your yume oshi? Vote for up to 3 characters.</p>
+        <h1 className="text-4xl font-bold text-teal-500 mb-2">Yumefess Character Polling 2026</h1>
+        <p className="text-gray-400 text-sm">Who is your beloved? Vote for up to 3 characters.</p>
       </div>
 
       {/* Social handle */}

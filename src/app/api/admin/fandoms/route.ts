@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   const fandoms = await prisma.fandom.findMany({
     orderBy: { name: 'asc' },
+    include: { aliases: true },
   })
   return NextResponse.json(fandoms)
 }

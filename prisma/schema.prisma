@@ -8,11 +8,22 @@ datasource db {
 }
 
 model Fandom {
-  id         Int         @id @default(autoincrement())
-  name       String      @unique
-  nameNorm   String      @unique
-  createdAt  DateTime    @default(now())
+  id         Int           @id @default(autoincrement())
+  name       String        @unique
+  nameNorm   String        @unique
+  createdAt  DateTime      @default(now())
   characters Character[]
+  aliases    FandomAlias[]
+}
+
+model FandomAlias {
+  id        Int    @id @default(autoincrement())
+  fandomId  Int
+  alias     String
+  aliasNorm String
+  fandom    Fandom @relation(fields: [fandomId], references: [id], onDelete: Cascade)
+
+  @@unique([fandomId, aliasNorm])
 }
 
 model Character {
