@@ -176,7 +176,7 @@ function OshiRow({
   return (
     <div className="bg-white rounded-2xl border border-teal-100 p-4 shadow-sm">
       <div className="flex justify-between items-center mb-3">
-        <span className="text-xs font-semibold uppercase tracking-widest text-teal-300">
+        <span className="text-xs font-semibold uppercase tracking-widest text-teal-600">
           Oshi #{index + 1}
         </span>
         {canRemove && (
@@ -318,7 +318,7 @@ export default function PollPage() {
 
       {/* Social handle */}
       <div className="mb-4 bg-white rounded-2xl border border-teal-100 p-4 shadow-sm">
-        <label className="text-xs font-semibold uppercase tracking-widest text-teal-300 block mb-2">
+        <label className="text-xs font-semibold uppercase tracking-widest text-teal-600 block mb-2">
           Sosial Media <span className="normal-case font-normal text-gray-400">(Opsional) Cantumkan sosial media hanya jika ingin ikut giveaway</span>
         </label>
         <input
