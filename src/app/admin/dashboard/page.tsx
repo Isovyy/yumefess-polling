@@ -844,6 +844,10 @@ function UnresolvedTab() {
   const [resolving, setResolving] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [msg, setMsg] = useState('')
+  const [search, setSearch] = useState('')
+  const [addFandom, setAddFandom] = useState('')
+  const [addChar, setAddChar] = useState('')
+  const [adding, setAdding] = useState(false)
 
   // "assign to existing" state
   const [assignKey, setAssignKey] = useState<string | null>(null)
@@ -859,6 +863,21 @@ function UnresolvedTab() {
   }
 
   useEffect(() => { load() }, [])
+
+  const addManualEntry = async () => {
+    if (!addFandom.trim() || !addChar.trim()) return
+    setAdding(true)
+    setMsg('')
+    await fetch('/api/admin/unresolved', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rawFandomInput: addFandom.trim(), rawCharacterInput: addChar.trim() }),
+    })
+    setAddFandom('')
+    setAddChar('')
+    setAdding(false)
+    load()
+  }
 
   const openAssign = async (key: string) => {
     if (assignKey === key) { setAssignKey(null); return }
@@ -951,13 +970,53 @@ function UnresolvedTab() {
     )
   }
 
+  const filteredUnresolved = search.trim()
+    ? unresolved.filter((u) =>
+        u.rawFandomInput.toLowerCase().includes(search.toLowerCase()) ||
+        u.rawCharacterInput.toLowerCase().includes(search.toLowerCase())
+      )
+    : unresolved
+
   return (
     <div className="space-y-3">
       <p className="text-xs text-gray-400">
         These entries could not be matched to a known character. Add as new, assign to an existing character, or delete.
       </p>
+      {/* Manual entry form */}
+      <div className="bg-white rounded-xl border border-teal-100 p-3 space-y-2">
+        <p className="text-xs font-semibold text-teal-600 uppercase tracking-wide">Add Manual Entry</p>
+        <div className="flex gap-2">
+          <input
+            value={addFandom}
+            onChange={(e) => setAddFandom(e.target.value)}
+            placeholder="Fandom"
+            className="flex-1 px-2 py-1.5 border border-teal-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal-300"
+          />
+          <input
+            value={addChar}
+            onChange={(e) => setAddChar(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addManualEntry()}
+            placeholder="Character"
+            className="flex-1 px-2 py-1.5 border border-teal-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal-300"
+          />
+          <button
+            onClick={addManualEntry}
+            disabled={adding || !addFandom.trim() || !addChar.trim()}
+            className="px-3 py-1.5 bg-teal-400 hover:bg-teal-500 text-white rounded-lg text-xs font-semibold transition disabled:opacity-50"
+          >
+            {adding ? '...' : 'Add'}
+          </button>
+        </div>
+      </div>
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Filter by fandom or character..."
+        className="w-full px-3 py-2 border border-teal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
+      />
+      {search && <p className="text-xs text-gray-400">{filteredUnresolved.length} of {unresolved.length} shown</p>}
       {msg && <p className="text-xs text-green-600 bg-green-50 px-3 py-2 rounded-lg">{msg}</p>}
-      {unresolved.map((u, i) => {
+      {filteredUnresolved.map((u, i) => {
         const key = `${u.rawFandomInput}::${u.rawCharacterInput}`
         const isAssigning = assignKey === key
         const isDeleting = deleting === key
@@ -1063,16 +1122,24 @@ function ResponsesTab() {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [unresolving, setUnresolving] = useState<number | null>(null)
+  const [search, setSearch] = useState('')
   const pageSize = 50
 
-  const loadPage = (p: number) => {
+  const loadPage = (p: number, q = search) => {
     setLoading(true)
-    fetch(`/api/admin/submissions?page=${p}`)
+    const params = new URLSearchParams({ page: String(p) })
+    if (q.trim()) params.set('search', q.trim())
+    fetch(`/api/admin/submissions?${params}`)
       .then((r) => r.json())
       .then((d) => { setSubmissions(d.submissions); setTotal(d.total); setLoading(false) })
   }
 
   useEffect(() => { loadPage(page) }, [page])
+
+  useEffect(() => {
+    setPage(1)
+    loadPage(1, search)
+  }, [search])
 
   const unresolveEntry = async (entryId: number, charName: string) => {
     if (!confirm(`Move "${charName}" back to Unresolved? The vote will not be counted until it's reassigned.`)) return
@@ -1096,7 +1163,13 @@ function ResponsesTab() {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-gray-400">{total} total responses</p>
+      <p className="text-xs text-gray-400">{total} {search ? 'matching' : 'total'} responses</p>
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search across all responses..."
+        className="w-full px-3 py-2 border border-teal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
+      />
       {submissions.map((s) => (
         <div key={s.id} className="bg-white rounded-xl border border-teal-100 shadow-sm overflow-hidden">
           <div className="px-4 py-2 bg-teal-50 border-b border-teal-100 flex justify-between items-center">

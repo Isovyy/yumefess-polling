@@ -32,6 +32,30 @@ export async function GET() {
   )
 }
 
+// Manually add an unresolved entry
+export async function POST(req: NextRequest) {
+  const { rawFandomInput, rawCharacterInput } = await req.json()
+  if (!rawFandomInput?.trim() || !rawCharacterInput?.trim()) {
+    return NextResponse.json({ error: 'Missing inputs' }, { status: 400 })
+  }
+
+  const submission = await prisma.submission.create({
+    data: {
+      ipHash: 'admin_manual',
+      entries: {
+        create: {
+          rank: 1,
+          rawFandomInput: rawFandomInput.trim(),
+          rawCharacterInput: rawCharacterInput.trim(),
+          characterId: null,
+        },
+      },
+    },
+  })
+
+  return NextResponse.json({ success: true, submissionId: submission.id })
+}
+
 // Delete all unresolved entries for a given (fandomInput, characterInput) pair
 export async function DELETE(req: NextRequest) {
   const { rawFandomInput, rawCharacterInput } = await req.json()
