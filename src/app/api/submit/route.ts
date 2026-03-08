@@ -68,14 +68,14 @@ export async function POST(req: NextRequest) {
     .digest('hex')
 
   if (process.env.DISABLE_RATE_LIMIT !== 'true') {
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    const dayAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
     const existing = await prisma.submission.findFirst({
       where: { ipHash, createdAt: { gte: dayAgo } },
     })
 
     if (existing) {
       return NextResponse.json(
-        { error: 'You have already submitted today. Come back tomorrow!' },
+        { error: 'You have already submitted recently. Please wait 2 weeks before submitting again.' },
         { status: 429 }
       )
     }
