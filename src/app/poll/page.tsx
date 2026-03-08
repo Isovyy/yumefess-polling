@@ -209,16 +209,6 @@ function OshiRow({
           fetchSuggestions={fetchCharacters}
           disabled={!entry.fandomInput.trim()}
         />
-        {entry.fandomInput && !entry.fandomId && (
-          <p className="text-xs text-amber-500 px-1">
-            Fandom not found in database — it will be saved as-is.
-          </p>
-        )}
-        {entry.fandomId && entry.characterInput && !entry.characterId && (
-          <p className="text-xs text-amber-500 px-1">
-            Character not found — your input will still be recorded.
-          </p>
-        )}
         {isDuplicate && (
           <p className="text-xs text-red-400 px-1">
             You already added this character above.

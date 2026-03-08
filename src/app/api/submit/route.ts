@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
 
     if (existing) {
       return NextResponse.json(
-        { error: 'You have already submitted recently. Please wait 2 weeks before submitting again.' },
+        { error: 'You have already submitted.' },
         { status: 429 }
       )
     }
