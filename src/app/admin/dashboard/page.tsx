@@ -434,6 +434,11 @@ function ManageTab() {
   const [newAlias, setNewAlias] = useState('')
   const [aliasMsg, setAliasMsg] = useState('')
 
+  const [renamingCharId, setRenamingCharId] = useState<number | null>(null)
+  const [renameCharVal, setRenameCharVal] = useState('')
+  const [renamingFandomId, setRenamingFandomId] = useState<number | null>(null)
+  const [renameFandomVal, setRenameFandomVal] = useState('')
+
   const [newFandomAlias, setNewFandomAlias] = useState('')
   const [fandomAliasMsg, setFandomAliasMsg] = useState('')
 
@@ -535,6 +540,30 @@ function ManageTab() {
     if (!confirm('Delete this character?')) return
     await fetch(`/api/admin/characters/${id}`, { method: 'DELETE' })
     if (selectedFandomId) loadCharacters(selectedFandomId)
+  }
+
+  const renameCharacter = async (id: number) => {
+    if (!renameCharVal.trim()) return
+    await fetch(`/api/admin/characters/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ canonicalName: renameCharVal.trim() }),
+    })
+    setRenamingCharId(null)
+    setRenameCharVal('')
+    if (selectedFandomId) loadCharacters(selectedFandomId)
+  }
+
+  const renameFandom = async (id: number) => {
+    if (!renameFandomVal.trim()) return
+    await fetch(`/api/admin/fandoms/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: renameFandomVal.trim() }),
+    })
+    setRenamingFandomId(null)
+    setRenameFandomVal('')
+    loadFandoms()
   }
 
   const addAlias = async (characterId: number) => {
@@ -667,6 +696,22 @@ function ManageTab() {
                       {fandomAliasMsg && selectedFandom?.id === f.id && (
                         <p className="text-xs text-green-600">{fandomAliasMsg}</p>
                       )}
+                      <div className="flex gap-2 pt-1 border-t border-teal-100">
+                        <input
+                          value={renamingFandomId === f.id ? renameFandomVal : ''}
+                          onFocus={() => { setRenamingFandomId(f.id); setRenameFandomVal(f.name) }}
+                          onChange={(e) => setRenameFandomVal(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && renameFandom(f.id)}
+                          placeholder="Rename fandom"
+                          className="flex-1 px-2 py-1.5 border border-teal-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal-300 bg-white"
+                        />
+                        <button
+                          onClick={() => renameFandom(f.id)}
+                          className="px-3 py-1.5 bg-teal-400 hover:bg-teal-500 text-white rounded-lg text-xs font-semibold transition"
+                        >
+                          Rename
+                        </button>
+                      </div>
                     </div>
 
                     <div className="border-t border-teal-200" />
@@ -754,6 +799,22 @@ function ManageTab() {
                                 {aliasMsg && (
                                   <p className="text-xs text-green-600">{aliasMsg}</p>
                                 )}
+                                <div className="flex gap-2 pt-1 border-t border-teal-100">
+                                  <input
+                                    value={renamingCharId === c.id ? renameCharVal : ''}
+                                    onFocus={() => { setRenamingCharId(c.id); setRenameCharVal(c.canonicalName) }}
+                                    onChange={(e) => setRenameCharVal(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && renameCharacter(c.id)}
+                                    placeholder="Rename character"
+                                    className="flex-1 px-2 py-1.5 border border-teal-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal-300 bg-white"
+                                  />
+                                  <button
+                                    onClick={() => renameCharacter(c.id)}
+                                    className="px-3 py-1.5 bg-teal-400 hover:bg-teal-500 text-white rounded-lg text-xs font-semibold transition"
+                                  >
+                                    Rename
+                                  </button>
+                                </div>
                               </div>
                             )}
                           </div>
