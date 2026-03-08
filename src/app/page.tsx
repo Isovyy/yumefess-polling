@@ -36,7 +36,7 @@ export default function TermsPage() {
             untuk menghindari suara tidak terhitung. Gunakan fitur saran (autocomplete) jika tersedia.
           </li>
           <li>
-            2 orang akan memenangkan color sketch couple dan 2 orang lain akan mendapatkan saldo e-wallet sebesar 25 ribu rupiah. Cantumkan akun sosial media kamu <span className="font-medium">hanya jika ingin mengikuti
+            1 orang akan memenangkan <span className="font-medium">color sketch couple</span> dan 2 orang lain akan mendapatkan saldo <span className="font-medium">e-wallet sebesar 25 ribu rupiah</span>. Cantumkan akun sosial media kamu <span className="font-medium">hanya jika ingin mengikuti
             giveaway</span>. Data sosial media tidak akan dipublikasikan, pemenang akan kami kontak langsung
             melalui sosial media yang tersedia.
           </li>
