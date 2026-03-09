@@ -442,6 +442,12 @@ function ManageTab() {
   const [newFandomAlias, setNewFandomAlias] = useState('')
   const [fandomAliasMsg, setFandomAliasMsg] = useState('')
 
+  const [showMerge, setShowMerge] = useState(false)
+  const [mergeTargetId, setMergeTargetId] = useState<number | null>(null)
+  const [mergeSourceIds, setMergeSourceIds] = useState<number[]>([])
+  const [merging, setMerging] = useState(false)
+  const [mergeMsg, setMergeMsg] = useState('')
+
   const loadFandoms = useCallback(async () => {
     const res = await fetch('/api/admin/fandoms')
     setFandoms(await res.json())
@@ -566,6 +572,49 @@ function ManageTab() {
     loadFandoms()
   }
 
+  const toggleMergeSource = (id: number) => {
+    setMergeSourceIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    )
+  }
+
+  const mergeFandoms = async () => {
+    if (!mergeTargetId || mergeSourceIds.length === 0) return
+    const targetName = fandoms.find((f) => f.id === mergeTargetId)?.name ?? ''
+    const sourceNames = mergeSourceIds.map((id) => fandoms.find((f) => f.id === id)?.name ?? id).join(', ')
+    if (
+      !confirm(
+        `Merge "${sourceNames}" INTO "${targetName}"?\n\n` +
+        `• Characters with matching names/aliases will be combined and their votes added together\n` +
+        `• Unique characters will be moved to "${targetName}"\n` +
+        `• All aliases from both fandoms are kept\n` +
+        `• Source fandoms will be deleted and their names added as aliases on "${targetName}"\n\n` +
+        `This cannot be undone.`
+      )
+    ) return
+    setMerging(true)
+    setMergeMsg('')
+    const res = await fetch('/api/admin/fandoms/merge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetFandomId: mergeTargetId, sourceFandomIds: mergeSourceIds }),
+    })
+    const d = await res.json()
+    if (res.ok) {
+      setMergeMsg(
+        `Merge complete! Combined ${d.charactersMerged} duplicate character(s), moved ${d.charactersMoved} unique character(s), added ${d.aliasesMerged} new alias(es).`
+      )
+      setMergeSourceIds([])
+      setMergeTargetId(null)
+      setShowMerge(false)
+      loadFandoms()
+      if (selectedFandomId) loadCharacters(selectedFandomId)
+    } else {
+      setMergeMsg(d.error ?? 'Merge failed.')
+    }
+    setMerging(false)
+  }
+
   const addAlias = async (characterId: number) => {
     setAliasMsg('')
     if (!newAlias.trim()) return
@@ -618,6 +667,80 @@ function ManageTab() {
           </button>
         </div>
         {fandomError && <p className="text-red-400 text-xs mt-2">{fandomError}</p>}
+      </div>
+
+      {/* Merge fandoms */}
+      <div className="bg-white rounded-2xl border border-teal-100 p-5 shadow-sm">
+        <button
+          onClick={() => { setShowMerge((v) => !v); setMergeMsg('') }}
+          className="flex items-center gap-2 w-full text-left"
+        >
+          <span className={`text-xs transition-transform duration-150 ${showMerge ? 'rotate-90' : ''} text-teal-300`}>›</span>
+          <h3 className="font-semibold text-gray-700">Merge Fandoms</h3>
+          <span className="text-xs text-gray-400">combine two fandoms, votes added for shared characters</span>
+        </button>
+
+        {showMerge && (
+          <div className="mt-4 space-y-3">
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Merge INTO (target — kept after merge):</p>
+              <select
+                value={mergeTargetId ?? ''}
+                onChange={(e) => {
+                  setMergeTargetId(Number(e.target.value) || null)
+                  setMergeSourceIds([])
+                }}
+                className="w-full px-3 py-2 border border-teal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
+              >
+                <option value="">Select target fandom…</option>
+                {fandoms.map((f) => (
+                  <option key={f.id} value={f.id}>{f.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {mergeTargetId && (
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Merge FROM (sources — will be deleted):</p>
+                <div className="space-y-1 max-h-48 overflow-y-auto border border-teal-100 rounded-lg p-2">
+                  {fandoms.filter((f) => f.id !== mergeTargetId).map((f) => (
+                    <label key={f.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-teal-50 cursor-pointer text-sm">
+                      <input
+                        type="checkbox"
+                        checked={mergeSourceIds.includes(f.id)}
+                        onChange={() => toggleMergeSource(f.id)}
+                        className="accent-teal-400"
+                      />
+                      <span className="text-gray-700">{f.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {mergeSourceIds.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700 space-y-0.5">
+                <p className="font-semibold">Preview:</p>
+                <p>Merge <span className="font-medium">{mergeSourceIds.map((id) => fandoms.find((f) => f.id === id)?.name).join(', ')}</span> into <span className="font-medium">{fandoms.find((f) => f.id === mergeTargetId)?.name}</span></p>
+                <p>Characters with matching names/aliases will have their votes combined. Unique characters will be moved. Source fandoms will be deleted.</p>
+              </div>
+            )}
+
+            <button
+              onClick={mergeFandoms}
+              disabled={!mergeTargetId || mergeSourceIds.length === 0 || merging}
+              className="w-full py-2 bg-amber-400 hover:bg-amber-500 text-white rounded-lg text-sm font-semibold transition disabled:opacity-40"
+            >
+              {merging ? 'Merging…' : `Merge ${mergeSourceIds.length > 0 ? mergeSourceIds.length : ''} fandom${mergeSourceIds.length !== 1 ? 's' : ''} into target`}
+            </button>
+
+            {mergeMsg && (
+              <p className={`text-xs px-3 py-2 rounded-lg ${mergeMsg.startsWith('Merge complete') ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>
+                {mergeMsg}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Fandom list with inline character accordion */}
@@ -933,7 +1056,15 @@ function UnresolvedTab() {
     })
     const d = await res.json()
     if (res.ok) {
-      setMsg(`Added "${d.character}" to "${d.fandom}" and resolved ${d.resolved} entry/entries.`)
+      let msg = ''
+      if (d.newFandom) {
+        msg = `Created new fandom "${d.fandom}" and added "${d.character}" to it.`
+      } else if (d.newCharacter) {
+        msg = `Added "${d.character}" to existing fandom "${d.fandom}".`
+      } else {
+        msg = `Assigned to existing character "${d.character}" in "${d.fandom}".`
+      }
+      setMsg(`${msg} Resolved ${d.resolved} entry/entries.`)
       load()
     }
     setResolving(null)
@@ -1122,6 +1253,7 @@ function ResponsesTab() {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [unresolving, setUnresolving] = useState<number | null>(null)
+  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const pageSize = 50
 
@@ -1136,10 +1268,18 @@ function ResponsesTab() {
 
   useEffect(() => { loadPage(page) }, [page])
 
-  useEffect(() => {
+  const applySearch = () => {
+    setSearch(searchInput)
     setPage(1)
-    loadPage(1, search)
-  }, [search])
+    loadPage(1, searchInput)
+  }
+
+  const clearSearch = () => {
+    setSearchInput('')
+    setSearch('')
+    setPage(1)
+    loadPage(1, '')
+  }
 
   const unresolveEntry = async (entryId: number, charName: string) => {
     if (!confirm(`Move "${charName}" back to Unresolved? The vote will not be counted until it's reassigned.`)) return
@@ -1164,12 +1304,29 @@ function ResponsesTab() {
   return (
     <div className="space-y-3">
       <p className="text-xs text-gray-400">{total} {search ? 'matching' : 'total'} responses</p>
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search across all responses..."
-        className="w-full px-3 py-2 border border-teal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
-      />
+      <div className="flex gap-2">
+        <input
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && applySearch()}
+          placeholder="Search across all responses..."
+          className="flex-1 px-3 py-2 border border-teal-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
+        />
+        <button
+          onClick={applySearch}
+          className="px-4 py-2 bg-teal-400 hover:bg-teal-500 text-white rounded-lg text-sm font-semibold transition"
+        >
+          Filter
+        </button>
+        {search && (
+          <button
+            onClick={clearSearch}
+            className="px-3 py-2 border border-teal-200 text-gray-400 hover:text-gray-600 rounded-lg text-sm transition"
+          >
+            Clear
+          </button>
+        )}
+      </div>
       {submissions.map((s) => (
         <div key={s.id} className="bg-white rounded-xl border border-teal-100 shadow-sm overflow-hidden">
           <div className="px-4 py-2 bg-teal-50 border-b border-teal-100 flex justify-between items-center">

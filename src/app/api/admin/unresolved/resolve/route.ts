@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
     where: { nameNorm: fandomNorm },
     include: { aliases: true },
   })
+  let newFandom = false
   if (!fandom) {
     // Check if this input matches a known fandom alias
     const fandomAlias = await prisma.fandomAlias.findFirst({
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest) {
       data: { name: rawFandomInput.trim(), nameNorm: fandomNorm },
       include: { aliases: true },
     })
+    newFandom = true
   }
 
   // Find existing character by alias norm (case-insensitive: "gavin" matches "Gavin")
@@ -43,6 +45,7 @@ export async function POST(req: NextRequest) {
     include: { character: true },
   })
   let character = existingAlias?.character ?? null
+  let newCharacter = false
 
   if (!character) {
     character = await prisma.character.create({
@@ -54,6 +57,7 @@ export async function POST(req: NextRequest) {
         },
       },
     })
+    newCharacter = true
   }
 
   // Resolve all matching unresolved entries (fandom name + all fandom aliases)
@@ -80,5 +84,5 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  return NextResponse.json({ resolved: toResolve.length, fandom: fandom.name, character: character.canonicalName })
+  return NextResponse.json({ resolved: toResolve.length, fandom: fandom.name, character: character.canonicalName, newFandom, newCharacter })
 }
