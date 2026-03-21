@@ -71,3 +71,23 @@ model Setting {
   key   String @id
   value String
 }
+
+model TiebreakerCharacter {
+  id            Int               @id @default(autoincrement())
+  name          String
+  fandom        String?
+  originalVotes Int
+  createdAt     DateTime          @default(now())
+  entries       TiebreakerEntry[]
+}
+
+model TiebreakerEntry {
+  id          Int                 @id @default(autoincrement())
+  ipHash      String
+  bracket     Int
+  characterId Int
+  createdAt   DateTime            @default(now())
+  character   TiebreakerCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([ipHash, bracket])
+}
