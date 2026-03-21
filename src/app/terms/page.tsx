@@ -1,25 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { prisma } from '@/lib/prisma'
 
-export const dynamic = 'force-dynamic'
-
-export default async function HomePage() {
-  const setting = await prisma.setting.findUnique({ where: { key: 'poll_closed' } })
-  const isClosed = setting?.value === 'true'
-
-  if (isClosed) {
-    return (
-      <main className="min-h-screen flex flex-col items-center justify-center bg-gray-950 text-white px-4">
-        <p className="text-gray-500 text-sm font-mono mb-2">503 Service Unavailable</p>
-        <h1 className="text-3xl font-bold mb-4">Under Maintenance</h1>
-        <p className="text-gray-400 text-center max-w-md">
-          The poll is temporarily closed. Check back soon!
-        </p>
-      </main>
-    )
-  }
-
+export default function TermsPage() {
   return (
     <main className="max-w-lg mx-auto px-4 py-12">
       {/* Header */}

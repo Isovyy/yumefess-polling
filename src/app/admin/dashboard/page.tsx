@@ -1403,6 +1403,7 @@ export default function AdminDashboard() {
   const [tab, setTab] = useState<Tab>('stats')
   const [stats, setStats] = useState<StatsData | null>(null)
   const [loadingStats, setLoadingStats] = useState(true)
+  const [pollClosed, setPollClosed] = useState<boolean | null>(null)
 
   const fetchStats = useCallback(() => {
     setLoadingStats(true)
@@ -1412,6 +1413,20 @@ export default function AdminDashboard() {
   }, [])
 
   useEffect(() => { fetchStats() }, [fetchStats])
+
+  useEffect(() => {
+    fetch('/api/admin/poll-status')
+      .then((r) => r.json())
+      .then((d) => setPollClosed(d.closed))
+  }, [])
+
+  const handleTogglePoll = async () => {
+    const action = pollClosed ? 'open' : 'close'
+    if (!confirm(`${action === 'close' ? 'Close' : 'Open'} the poll?`)) return
+    const res = await fetch('/api/admin/poll-status', { method: 'POST' })
+    const d = await res.json()
+    setPollClosed(d.closed)
+  }
 
   useEffect(() => {
     if (tab === 'stats') fetchStats()
@@ -1458,6 +1473,12 @@ export default function AdminDashboard() {
             className="text-xs text-red-400 hover:text-red-600 transition"
           >
             Clear submissions
+          </button>
+          <button
+            onClick={handleTogglePoll}
+            className={`text-xs transition ${pollClosed ? 'text-green-400 hover:text-green-600' : 'text-orange-400 hover:text-orange-600'}`}
+          >
+            {pollClosed === null ? '...' : pollClosed ? 'Open poll' : 'Close poll'}
           </button>
           <button
             onClick={handleLogout}

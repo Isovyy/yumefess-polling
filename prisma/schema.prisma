@@ -66,3 +66,8 @@ model SubmissionEntry {
   submission        Submission @relation(fields: [submissionId], references: [id])
   character         Character? @relation(fields: [characterId], references: [id])
 }
+
+model Setting {
+  key   String @id
+  value String
+}
