@@ -229,35 +229,48 @@ function ResponsesTab({ suspicious }: { suspicious: boolean }) {
   if (loading) return <p className="text-gray-400 text-sm text-center py-10">Loading…</p>
   if (entries.length === 0) return <p className="text-gray-400 text-sm text-center py-10">No entries.</p>
 
+  // Group entries by ipHash so each user gets their own card
+  const grouped = entries.reduce<Record<string, TiebreakerEntry[]>>((acc, e) => {
+    if (!acc[e.ipHash]) acc[e.ipHash] = []
+    acc[e.ipHash].push(e)
+    return acc
+  }, {})
+
   return (
-    <div className="bg-white rounded-2xl border border-teal-100 shadow-sm overflow-hidden">
-      <div className="divide-y divide-gray-50">
-        {entries.map((entry) => (
-          <div key={entry.id} className="flex items-center gap-3 px-4 py-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-700 truncate">
-                {entry.character.name}
-                {entry.character.fandom && <span className="ml-1 text-xs text-gray-400 font-normal">({entry.character.fandom})</span>}
-              </p>
-              <p className="text-xs text-gray-400">
-                Bracket {entry.bracket} · {new Date(entry.createdAt).toLocaleString()} · <span className="font-mono">{entry.ipHash.slice(0, 10)}…</span>
-              </p>
-            </div>
-            <button
-              onClick={() => handleFlag(entry.id)}
-              className={`text-xs transition shrink-0 ${suspicious ? 'text-teal-500 hover:text-teal-700' : 'text-orange-400 hover:text-orange-600'}`}
-            >
-              {suspicious ? 'Unresolve' : 'Suspect'}
-            </button>
-            <button onClick={() => handleResetIp(entry.ipHash)} className="text-xs text-purple-400 hover:text-purple-600 transition shrink-0">
-              Reset IP
-            </button>
-            <button onClick={() => handleDelete(entry.id)} className="text-xs text-red-400 hover:text-red-600 transition shrink-0">
-              Delete
-            </button>
+    <div className="space-y-3">
+      {Object.entries(grouped).map(([ipHash, userEntries]) => (
+        <div key={ipHash} className="bg-white rounded-2xl border border-teal-100 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2 bg-teal-50 border-b border-teal-100">
+            <span className="text-xs font-mono text-teal-600">{ipHash.slice(0, 10)}…</span>
+            <span className="text-xs text-gray-400">{new Date(userEntries[0].createdAt).toLocaleString()}</span>
           </div>
-        ))}
-      </div>
+          <div className="divide-y divide-gray-50">
+            {userEntries.map((entry) => (
+              <div key={entry.id} className="flex items-center gap-3 px-4 py-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-400 mb-0.5">Bracket {entry.bracket}</p>
+                  <p className="text-sm font-medium text-gray-700 truncate">
+                    {entry.character.name}
+                    {entry.character.fandom && <span className="ml-1 text-xs text-gray-400 font-normal">({entry.character.fandom})</span>}
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleFlag(entry.id)}
+                  className={`text-xs transition shrink-0 ${suspicious ? 'text-teal-500 hover:text-teal-700' : 'text-orange-400 hover:text-orange-600'}`}
+                >
+                  {suspicious ? 'Unresolve' : 'Suspect'}
+                </button>
+                <button onClick={() => handleResetIp(ipHash)} className="text-xs text-purple-400 hover:text-purple-600 transition shrink-0">
+                  Reset IP
+                </button>
+                <button onClick={() => handleDelete(entry.id)} className="text-xs text-red-400 hover:text-red-600 transition shrink-0">
+                  Delete
+            </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
