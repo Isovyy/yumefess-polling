@@ -173,6 +173,10 @@ export default function TiebreakerPage() {
           
           </li>
           <li>
+            Posisi dan populasi karakter di tiap bracket bersifat acak bagi tiap orang dan tidak mencerminkan ranking karakter tersebut. 
+          
+          </li>
+          <li>
             Karakter yang namanya tidak ada di form ini bukan berarti tidak masuk list. List ini hanya termasuk 
             karakter yang memiliki kesamaan vote dengan satu atau lebih karakter lain.
           </li>
