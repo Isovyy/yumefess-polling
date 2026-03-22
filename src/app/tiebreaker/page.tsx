@@ -200,11 +200,16 @@ export default function TiebreakerPage() {
           <div className="bg-white rounded-2xl border border-teal-100 p-5 shadow-sm">
             <div className="flex justify-between items-center mb-3">
               <h2 className="text-sm font-semibold text-teal-600">Bracket 1</h2>
+              <div className="flex items-center gap-2">
+              {selected1 && !voted1 && (
+                <button onClick={() => setSelected1(null)} className="text-xs text-gray-400 hover:text-gray-600 transition">Clear</button>
+              )}
               {voted1 && (
                 <span className="text-xs text-teal-500 bg-teal-50 px-2 py-0.5 rounded-full">
                   {voted1 === 'none' ? 'Voted: none' : `Voted: ${voted1}`}
                 </span>
               )}
+              </div>
             </div>
             {voted1 ? (
               voted1 === 'none'
@@ -223,11 +228,16 @@ export default function TiebreakerPage() {
           <div className="bg-white rounded-2xl border border-teal-100 p-5 shadow-sm">
             <div className="flex justify-between items-center mb-3">
               <h2 className="text-sm font-semibold text-teal-600">Bracket 2</h2>
+              <div className="flex items-center gap-2">
+              {selected2 && !voted2 && (
+                <button onClick={() => setSelected2(null)} className="text-xs text-gray-400 hover:text-gray-600 transition">Clear</button>
+              )}
               {voted2 && (
                 <span className="text-xs text-teal-500 bg-teal-50 px-2 py-0.5 rounded-full">
                   {voted2 === 'none' ? 'Voted: none' : `Voted: ${voted2}`}
                 </span>
               )}
+              </div>
             </div>
             {voted2 ? (
               voted2 === 'none'
