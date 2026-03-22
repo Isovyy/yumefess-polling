@@ -85,10 +85,10 @@ model TiebreakerEntry {
   id          Int                 @id @default(autoincrement())
   ipHash      String
   bracket     Int
-  characterId Int
+  characterId Int?
   suspicious  Boolean             @default(false)
   createdAt   DateTime            @default(now())
-  character   TiebreakerCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  character   TiebreakerCharacter? @relation(fields: [characterId], references: [id], onDelete: Cascade)
 
   @@unique([ipHash, bracket])
 }

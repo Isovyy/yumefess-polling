@@ -8,13 +8,16 @@ interface TiebreakerCharacter {
   name: string
   fandom: string | null
   originalVotes: number
+  bracket: 1 | 2
 }
 
 function CharacterList({
+  bracketNum,
   characters,
   selected,
   onSelect,
 }: {
+  bracketNum: number
   characters: TiebreakerCharacter[]
   selected: number | null
   onSelect: (id: number | null) => void
@@ -30,7 +33,7 @@ function CharacterList({
         >
           <input
             type="radio"
-            name={`bracket-${char.originalVotes > 7 ? 1 : 2}`}
+            name={`bracket-${bracketNum}`}
             value={char.id}
             checked={selected === char.id}
             onChange={() => onSelect(selected === char.id ? null : char.id)}
@@ -63,13 +66,13 @@ export default function TiebreakerPage() {
     ]).then(([data, myVote]) => {
       setClosed(data.closed)
       setCharacters(data.characters ?? [])
-      if (myVote.bracket1) { setVoted1(myVote.bracket1.characterName); setSelected1(myVote.bracket1.characterId) }
-      if (myVote.bracket2) { setVoted2(myVote.bracket2.characterName); setSelected2(myVote.bracket2.characterId) }
+      if (myVote.bracket1) { setVoted1(myVote.bracket1.skipped ? 'none' : myVote.bracket1.characterName); if (!myVote.bracket1.skipped) setSelected1(myVote.bracket1.characterId) }
+      if (myVote.bracket2) { setVoted2(myVote.bracket2.skipped ? 'none' : myVote.bracket2.characterName); if (!myVote.bracket2.skipped) setSelected2(myVote.bracket2.characterId) }
       setLoading(false)
     })
   }, [])
 
-  const alreadyVotedBoth = voted1 !== null && voted2 !== null
+  const alreadyVoted = voted1 !== null || voted2 !== null
 
   const handleSubmit = async () => {
     if (!selected1 && !selected2) return
@@ -93,15 +96,15 @@ export default function TiebreakerPage() {
       setSubmitting(false)
       return
     }
-    if (bracket1CharacterId) setVoted1(characters.find((c) => c.id === bracket1CharacterId)?.name ?? null)
-    if (bracket2CharacterId) setVoted2(characters.find((c) => c.id === bracket2CharacterId)?.name ?? null)
+    setVoted1(bracket1CharacterId ? (characters.find((c) => c.id === bracket1CharacterId)?.name ?? null) : 'none')
+    setVoted2(bracket2CharacterId ? (characters.find((c) => c.id === bracket2CharacterId)?.name ?? null) : 'none')
     setSuccess(true)
     setSubmitting(false)
   }
 
-  const alpha = (a: TiebreakerCharacter, b: TiebreakerCharacter) => a.name.localeCompare(b.name)
-  const bracket1 = characters.filter((c) => c.originalVotes > 7).sort(alpha)
-  const bracket2 = characters.filter((c) => c.originalVotes === 6 || c.originalVotes === 7).sort(alpha)
+  // Brackets are assigned server-side per IP — just split by the bracket field
+  const bracket1 = characters.filter((c) => c.bracket === 1)
+  const bracket2 = characters.filter((c) => c.bracket === 2)
 
   if (loading) {
     return (
@@ -156,7 +159,7 @@ export default function TiebreakerPage() {
                 akan tetap memperoleh ranking diatas A.
               </p>
               <p>
-                Sebagai contoh lain, bila C dan D sebelumnya sama-sama memiliki 9 votes lalu C
+                <span className="font-medium">Contoh:</span> bila C dan D sebelumnya sama-sama memiliki 9 votes lalu C
                 memperoleh 10 votes dan D mendapat 15 votes di tie breaker round maka D akan
                 memperoleh ranking diatas C.
               </p>
@@ -165,7 +168,13 @@ export default function TiebreakerPage() {
           <li>
             Peserta dipersilakan untuk memilih satu karakter dari Bracket 1, satu karakter dari
             Bracket 2, atau keduanya sekaligus. Pengisian salah satu bracket sudah cukup dan tidak
-            diwajibkan untuk mengisi bracket lainnya.
+            diwajibkan untuk mengisi bracket lainnya. Tolong pastikan anda telah mengisi semua bracket 
+            yang anda ingin (baik salah satu atau keduanya) sebelum klik 'submit'.
+          
+          </li>
+          <li>
+            Karakter yang namanya tidak ada di form ini bukan berarti tidak masuk list. List ini hanya termasuk 
+            karakter yang memiliki kesamaan vote dengan satu atau lebih karakter lain.
           </li>
         </ol>
         <p className="border-t border-teal-50 pt-3 text-gray-500">
@@ -189,14 +198,18 @@ export default function TiebreakerPage() {
               <h2 className="text-sm font-semibold text-teal-600">Bracket 1</h2>
               {voted1 && (
                 <span className="text-xs text-teal-500 bg-teal-50 px-2 py-0.5 rounded-full">
-                  Voted: {voted1}
+                  {voted1 === 'none' ? 'Voted: none' : `Voted: ${voted1}`}
                 </span>
               )}
             </div>
             {voted1 ? (
-              <p className="text-xs text-gray-400">Kamu sudah memilih di bracket ini.</p>
+              voted1 === 'none'
+                ? <p className="text-xs text-gray-400 italic">—</p>
+                : <p className="text-xs text-gray-400">Kamu sudah memilih di bracket ini.</p>
+            ) : alreadyVoted ? (
+              <p className="text-xs text-gray-400 italic">—</p>
             ) : (
-              <CharacterList characters={bracket1} selected={selected1} onSelect={setSelected1} />
+              <CharacterList bracketNum={1} characters={bracket1} selected={selected1} onSelect={setSelected1} />
             )}
           </div>
         )}
@@ -208,19 +221,23 @@ export default function TiebreakerPage() {
               <h2 className="text-sm font-semibold text-teal-600">Bracket 2</h2>
               {voted2 && (
                 <span className="text-xs text-teal-500 bg-teal-50 px-2 py-0.5 rounded-full">
-                  Voted: {voted2}
+                  {voted2 === 'none' ? 'Voted: none' : `Voted: ${voted2}`}
                 </span>
               )}
             </div>
             {voted2 ? (
-              <p className="text-xs text-gray-400">Kamu sudah memilih di bracket ini.</p>
+              voted2 === 'none'
+                ? <p className="text-xs text-gray-400 italic">—</p>
+                : <p className="text-xs text-gray-400">Kamu sudah memilih di bracket ini.</p>
+            ) : alreadyVoted ? (
+              <p className="text-xs text-gray-400 italic">—</p>
             ) : (
-              <CharacterList characters={bracket2} selected={selected2} onSelect={setSelected2} />
+              <CharacterList bracketNum={2} characters={bracket2} selected={selected2} onSelect={setSelected2} />
             )}
           </div>
         )}
 
-        {!alreadyVotedBoth && (
+        {!alreadyVoted && (
           <>
             {error && <p className="text-red-500 text-sm text-center">{error}</p>}
             <button

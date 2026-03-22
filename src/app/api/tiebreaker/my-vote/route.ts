@@ -14,8 +14,14 @@ export async function GET(req: NextRequest) {
   const b1 = entries.find((e) => e.bracket === 1)
   const b2 = entries.find((e) => e.bracket === 2)
 
+  const toResult = (e: typeof b1) => {
+    if (!e) return null
+    if (!e.characterId) return { skipped: true }
+    return { characterId: e.characterId, characterName: e.character!.name }
+  }
+
   return NextResponse.json({
-    bracket1: b1 ? { characterId: b1.characterId, characterName: b1.character.name } : null,
-    bracket2: b2 ? { characterId: b2.characterId, characterName: b2.character.name } : null,
+    bracket1: toResult(b1),
+    bracket2: toResult(b2),
   })
 }

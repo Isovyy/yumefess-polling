@@ -216,6 +216,16 @@ function ResponsesTab({ suspicious }: { suspicious: boolean }) {
     fetchEntries()
   }
 
+  const handleResetIp = async (ipHash: string) => {
+    if (!confirm(`Delete ALL votes from this IP (${ipHash.slice(0, 10)}…)?`)) return
+    await fetch('/api/admin/tiebreaker/reset-ip', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ipHash }),
+    })
+    fetchEntries()
+  }
+
   if (loading) return <p className="text-gray-400 text-sm text-center py-10">Loading…</p>
   if (entries.length === 0) return <p className="text-gray-400 text-sm text-center py-10">No entries.</p>
 
@@ -238,6 +248,9 @@ function ResponsesTab({ suspicious }: { suspicious: boolean }) {
               className={`text-xs transition shrink-0 ${suspicious ? 'text-teal-500 hover:text-teal-700' : 'text-orange-400 hover:text-orange-600'}`}
             >
               {suspicious ? 'Unresolve' : 'Suspect'}
+            </button>
+            <button onClick={() => handleResetIp(entry.ipHash)} className="text-xs text-purple-400 hover:text-purple-600 transition shrink-0">
+              Reset IP
             </button>
             <button onClick={() => handleDelete(entry.id)} className="text-xs text-red-400 hover:text-red-600 transition shrink-0">
               Delete
