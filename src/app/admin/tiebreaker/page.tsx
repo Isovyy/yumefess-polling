@@ -27,6 +27,7 @@ interface TiebreakerEntry {
   bracket: number
   characterId: number
   suspicious: boolean
+  deleted: boolean
   createdAt: string
   character: { name: string; fandom: string | null }
 }
@@ -192,6 +193,8 @@ function CharactersTab({
 function ResponsesTab({ suspicious }: { suspicious: boolean }) {
   const [entries, setEntries] = useState<TiebreakerEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [showRemoved, setShowRemoved] = useState(false)
 
   const fetchEntries = useCallback(() => {
     setLoading(true)
@@ -205,45 +208,35 @@ function ResponsesTab({ suspicious }: { suspicious: boolean }) {
 
   useEffect(() => { fetchEntries() }, [fetchEntries])
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Delete this vote permanently?')) return
-    try {
-      const res = await fetch(`/api/admin/tiebreaker/responses/${id}`, { method: 'DELETE' })
-      const data = await res.json()
-      if (res.ok) fetchEntries()
-      else alert(`Delete failed: ${data.error ?? res.status}`)
-    } catch (e) {
-      alert(`Delete error: ${e}`)
-    }
+  const handleToggleDeleted = async (id: number) => {
+    const res = await fetch(`/api/admin/tiebreaker/responses/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'deleted' }),
+    })
+    if (res.ok) fetchEntries()
   }
 
   const handleFlag = async (id: number) => {
-    try {
-      const res = await fetch(`/api/admin/tiebreaker/responses/${id}`, { method: 'PATCH' })
-      const data = await res.json()
-      if (res.ok) fetchEntries()
-      else alert(`Suspect failed: ${data.error ?? res.status}`)
-    } catch (e) {
-      alert(`Suspect error: ${e}`)
-    }
-  }
-
-  const handleResetIp = async (ipHash: string) => {
-    if (!confirm(`Delete ALL votes from this IP (${ipHash.slice(0, 10)}…)?`)) return
-    const res = await fetch('/api/admin/tiebreaker/reset-ip', {
-      method: 'DELETE',
+    const res = await fetch(`/api/admin/tiebreaker/responses/${id}`, {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ipHash }),
+      body: JSON.stringify({ action: 'suspicious' }),
     })
     if (res.ok) fetchEntries()
-    else alert('Reset failed.')
   }
 
   if (loading) return <p className="text-gray-400 text-sm text-center py-10">Loading…</p>
   if (entries.length === 0) return <p className="text-gray-400 text-sm text-center py-10">No entries.</p>
 
-  // Group entries by ipHash so each user gets their own card
-  const grouped = entries.reduce<Record<string, TiebreakerEntry[]>>((acc, e) => {
+  const q = search.toLowerCase()
+  const filtered = entries.filter((e) => {
+    if (!showRemoved && e.deleted) return false
+    if (q) return e.character.name.toLowerCase().includes(q) || e.ipHash.toLowerCase().includes(q)
+    return true
+  })
+
+  const grouped = filtered.reduce<Record<string, TiebreakerEntry[]>>((acc, e) => {
     if (!acc[e.ipHash]) acc[e.ipHash] = []
     acc[e.ipHash].push(e)
     return acc
@@ -251,6 +244,24 @@ function ResponsesTab({ suspicious }: { suspicious: boolean }) {
 
   return (
     <div className="space-y-3">
+      <div className="flex gap-2 items-center">
+        <input
+          type="text"
+          placeholder="Search by name or IP…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-400"
+        />
+        <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer whitespace-nowrap">
+          <input type="checkbox" checked={showRemoved} onChange={(e) => setShowRemoved(e.target.checked)} className="accent-teal-500" />
+          Show removed
+        </label>
+      </div>
+
+      {Object.keys(grouped).length === 0 && (
+        <p className="text-gray-400 text-sm text-center py-6">No entries match.</p>
+      )}
+
       {Object.entries(grouped).map(([ipHash, userEntries]) => (
         <div key={ipHash} className="bg-white rounded-2xl border border-teal-100 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2 bg-teal-50 border-b border-teal-100">
@@ -259,26 +270,29 @@ function ResponsesTab({ suspicious }: { suspicious: boolean }) {
           </div>
           <div className="divide-y divide-gray-50">
             {userEntries.map((entry) => (
-              <div key={entry.id} className="flex items-center gap-3 px-4 py-3">
+              <div key={entry.id} className={`flex items-center gap-3 px-4 py-3 ${entry.deleted ? 'opacity-50 bg-gray-50' : ''}`}>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-gray-400 mb-0.5">Bracket {entry.bracket}</p>
-                  <p className="text-sm font-medium text-gray-700 truncate">
+                  <p className={`text-sm font-medium truncate ${entry.deleted ? 'line-through text-gray-400' : 'text-gray-700'}`}>
                     {entry.character.name}
                     {entry.character.fandom && <span className="ml-1 text-xs text-gray-400 font-normal">({entry.character.fandom})</span>}
                   </p>
                 </div>
+                {entry.deleted && (
+                  <span className="text-xs text-red-400 bg-red-50 px-2 py-0.5 rounded-full shrink-0">removed</span>
+                )}
                 <button
                   onClick={() => handleFlag(entry.id)}
                   className={`text-xs transition shrink-0 ${suspicious ? 'text-teal-500 hover:text-teal-700' : 'text-orange-400 hover:text-orange-600'}`}
                 >
                   {suspicious ? 'Unresolve' : 'Suspect'}
                 </button>
-                <button onClick={() => handleResetIp(ipHash)} className="text-xs text-purple-400 hover:text-purple-600 transition shrink-0">
-                  Reset IP
+                <button
+                  onClick={() => handleToggleDeleted(entry.id)}
+                  className={`text-xs transition shrink-0 ${entry.deleted ? 'text-teal-500 hover:text-teal-700' : 'text-red-400 hover:text-red-600'}`}
+                >
+                  {entry.deleted ? 'Restore' : 'Remove'}
                 </button>
-                <button onClick={() => handleDelete(entry.id)} className="text-xs text-red-400 hover:text-red-600 transition shrink-0">
-                  Delete
-            </button>
               </div>
             ))}
           </div>
@@ -287,6 +301,7 @@ function ResponsesTab({ suspicious }: { suspicious: boolean }) {
     </div>
   )
 }
+
 
 // ---------------------------------------------------------------------------
 // Main page

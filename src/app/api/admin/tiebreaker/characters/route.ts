@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 export async function GET() {
   const characters = await prisma.tiebreakerCharacter.findMany({
     orderBy: [{ originalVotes: 'desc' }, { name: 'asc' }],
-    include: { _count: { select: { entries: true } } },
+    include: { _count: { select: { entries: { where: { deleted: false } } } } },
   })
   return NextResponse.json(characters)
 }

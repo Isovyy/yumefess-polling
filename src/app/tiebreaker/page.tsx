@@ -58,6 +58,7 @@ export default function TiebreakerPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     Promise.all([
@@ -103,8 +104,10 @@ export default function TiebreakerPage() {
   }
 
   // Brackets are assigned server-side per IP — just split by the bracket field
-  const bracket1 = characters.filter((c) => c.bracket === 1)
-  const bracket2 = characters.filter((c) => c.bracket === 2)
+  const q = search.toLowerCase()
+  const match = (c: TiebreakerCharacter) => !q || c.name.toLowerCase().includes(q) || (c.fandom ?? '').toLowerCase().includes(q)
+  const bracket1 = characters.filter((c) => c.bracket === 1 && match(c))
+  const bracket2 = characters.filter((c) => c.bracket === 2 && match(c))
 
   if (loading) {
     return (
@@ -193,6 +196,16 @@ export default function TiebreakerPage() {
           Vote terkirim! Terima kasih sudah berpartisipasi.
         </div>
       )}
+
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Cari karakter atau fandom…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full border border-teal-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-teal-400 shadow-sm"
+        />
+      </div>
 
       <div className="space-y-4">
         {/* Bracket 1 */}

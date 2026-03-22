@@ -87,6 +87,7 @@ model TiebreakerEntry {
   bracket     Int
   characterId Int?
   suspicious  Boolean             @default(false)
+  deleted     Boolean             @default(false)
   createdAt   DateTime            @default(now())
   character   TiebreakerCharacter? @relation(fields: [characterId], references: [id], onDelete: Cascade)
 
