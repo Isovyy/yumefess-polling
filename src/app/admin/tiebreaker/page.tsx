@@ -198,7 +198,7 @@ function ResponsesTab({ suspicious }: { suspicious: boolean }) {
 
   const fetchEntries = useCallback(() => {
     setLoading(true)
-    fetch('/api/admin/tiebreaker/responses')
+    fetch('/api/admin/tiebreaker/responses', { cache: 'no-store' })
       .then((r) => r.json())
       .then((data: TiebreakerEntry[]) => {
         setEntries(data.filter((e) => e.suspicious === suspicious))

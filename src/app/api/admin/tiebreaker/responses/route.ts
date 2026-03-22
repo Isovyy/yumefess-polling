@@ -7,5 +7,7 @@ export async function GET() {
     include: { character: true },
   })
   // Exclude skipped entries (no character) but keep removed (deleted) ones for the record
-  return NextResponse.json(entries.filter((e) => e.characterId !== null))
+  return NextResponse.json(entries.filter((e) => e.characterId !== null), {
+    headers: { 'Cache-Control': 'no-store' },
+  })
 }
