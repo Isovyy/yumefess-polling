@@ -6,5 +6,6 @@ export async function GET() {
     orderBy: { createdAt: 'desc' },
     include: { character: true },
   })
-  return NextResponse.json(entries)
+  // Exclude skipped entries (characterId is null — user submitted but left that bracket empty)
+  return NextResponse.json(entries.filter((e) => e.characterId !== null))
 }
