@@ -207,23 +207,36 @@ function ResponsesTab({ suspicious }: { suspicious: boolean }) {
 
   const handleDelete = async (id: number) => {
     if (!confirm('Delete this vote permanently?')) return
-    await fetch(`/api/admin/tiebreaker/responses/${id}`, { method: 'DELETE' })
-    fetchEntries()
+    try {
+      const res = await fetch(`/api/admin/tiebreaker/responses/${id}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (res.ok) fetchEntries()
+      else alert(`Delete failed: ${data.error ?? res.status}`)
+    } catch (e) {
+      alert(`Delete error: ${e}`)
+    }
   }
 
   const handleFlag = async (id: number) => {
-    await fetch(`/api/admin/tiebreaker/responses/${id}`, { method: 'PATCH' })
-    fetchEntries()
+    try {
+      const res = await fetch(`/api/admin/tiebreaker/responses/${id}`, { method: 'PATCH' })
+      const data = await res.json()
+      if (res.ok) fetchEntries()
+      else alert(`Suspect failed: ${data.error ?? res.status}`)
+    } catch (e) {
+      alert(`Suspect error: ${e}`)
+    }
   }
 
   const handleResetIp = async (ipHash: string) => {
     if (!confirm(`Delete ALL votes from this IP (${ipHash.slice(0, 10)}…)?`)) return
-    await fetch('/api/admin/tiebreaker/reset-ip', {
+    const res = await fetch('/api/admin/tiebreaker/reset-ip', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ipHash }),
     })
-    fetchEntries()
+    if (res.ok) fetchEntries()
+    else alert('Reset failed.')
   }
 
   if (loading) return <p className="text-gray-400 text-sm text-center py-10">Loading…</p>
