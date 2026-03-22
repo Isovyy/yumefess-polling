@@ -285,7 +285,7 @@ function ResponsesTab({ suspicious }: { suspicious: boolean }) {
                   onClick={() => handleFlag(entry.id)}
                   className={`text-xs transition shrink-0 ${suspicious ? 'text-teal-500 hover:text-teal-700' : 'text-orange-400 hover:text-orange-600'}`}
                 >
-                  {suspicious ? 'Unresolve' : 'Suspect'}
+                  {suspicious ? 'Resolve' : 'Suspect'}
                 </button>
                 <button
                   onClick={() => handleToggleDeleted(entry.id)}
