@@ -115,10 +115,6 @@ export default function PollingResultsPage() {
           survei maupun perubahan popularitas karakter.
         </li>
         <li>
-          Hasil survei secara alami bervariasi tergantung pada responden. Tahun ini jumlah
-          responden adalah lebih banyak dari terakhir kali proyek ini diadakan, dimana satu orang dapat memilih 1–3 karakter.
-        </li>
-        <li>
           <strong>Screenshot atau repost sebagian dari artikel ini dilarang</strong>. Artikel ini disusun
           berdasarkan keseluruhan konteksnya termasuk catatan ini, dan penyebaran sebagian saja
           dapat menyebabkan kesalahpahaman. Mohon jangan gunakan untuk merendahkan atau
@@ -140,12 +136,12 @@ export default function PollingResultsPage() {
 
       {/* Fandom Rankings */}
       <h2 className="font-bold text-gray-900 mb-2">Fandom:</h2>
-      <ul className="text-sm leading-relaxed space-y-1 mb-8 list-none pl-0">
-        <li>1 Ensemble Stars &amp; Genshin Impact</li>
-        <li>2 Honkai: Star Rail</li>
-        <li>3 Love and Deepspace</li>
-        <li>4 Tokyo Debunker</li>
-        <li>5 Twisted Wonderland</li>
+      <ul className="space-y-1 mb-8 list-none pl-0">
+        <li><h4 className="font-semibold text-gray-900">5 Twisted Wonderland</h4></li>
+        <li><h4 className="font-semibold text-gray-900">4 Tokyo Debunker</h4></li>
+        <li><h4 className="font-semibold text-gray-900">3 Love and Deepspace</h4></li>
+        <li><h4 className="font-semibold text-gray-900">2 Honkai: Star Rail</h4></li>
+        <li><h4 className="font-semibold text-gray-900">1 Ensemble Stars &amp; Genshin Impact</h4></li>
       </ul>
 
       {/* Character Rankings */}
