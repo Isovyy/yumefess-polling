@@ -129,8 +129,8 @@ export default function PollingResultsPage() {
       <p className="text-sm leading-relaxed mb-8">
         Terakhir, terkait penyebutan proyek ini di media sosial, selain qrt head tweet pengumuman{' '}
         <strong>@mlytfess</strong> di X yang sudah diberi tagar{' '}
-        <strong>#YumefessOshiPolling2026</strong>, harap gunakan tagar berikut sebagai langkah
-        pencegahan word-mute: <strong>#YumefessOshiPolling2026</strong>. Ini adalah peraturan untuk
+        <strong>#YumefessOshiPolling26</strong>, harap gunakan tagar berikut sebagai langkah
+        pencegahan word-mute: <strong>#YumefessOshiPolling26</strong>. Ini adalah peraturan untuk
         menjaga kenyamanan bagi mereka yang menikmati proyek ini maupun yang tidak.
       </p>
 
