@@ -89,7 +89,7 @@ export default function PollingResultsPage() {
       </h2>
       <p className="text-sm leading-relaxed mb-3">
         Kami mengadakan survei yang ditujukan kepada para yumejin (penggemar yang menikmati konten
-        self-insert/reader-insert) dengan meminta mereka merekomendasikan 1–3 karakter yang
+        ocxcanon/self-insert/reader-insert) dengan meminta mereka merekomendasikan 1–3 karakter yang
         merupakan atau pernah menjadi comfort character mereka. (Periode survei: 5–25 Maret 2026)
       </p>
       <p className="text-sm leading-relaxed mb-8">
@@ -165,7 +165,8 @@ export default function PollingResultsPage() {
 
       <p className="text-sm leading-relaxed mb-6">
         Demikian hasil Oshi Polling Yumefess 2026. Dibawah ini kami cantumkan bentuk PDF sekaligus
-        hasil polling dari tahun 2023 dan 2022. Terima kasih.
+        hasil polling dari tahun 2023 dan 2022. Akhir kata mohon maaf bila ada kata-kata atau penjelasan
+        yang sekiranya kurang tepat. Untuk pertanyaan atau komentar mohon hubungi @FATUIUWU (X). Terima kasih.
       </p>
 
       {/* PDF Downloads */}
