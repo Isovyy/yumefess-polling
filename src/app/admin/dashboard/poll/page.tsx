@@ -1471,6 +1471,13 @@ export default function AdminDashboard() {
           >
             Export seed.js
           </a>
+          <a
+            href="/api/admin/export-users"
+            download
+            className="text-xs text-teal-400 hover:text-teal-600 transition"
+          >
+            Export user list
+          </a>
           <button
             onClick={async () => {
               if (!confirm('Delete ALL submissions and votes? Fandoms and characters will be kept. This cannot be undone.')) return
