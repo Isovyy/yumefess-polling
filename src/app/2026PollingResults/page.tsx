@@ -80,8 +80,8 @@ export default function PollingResultsPage() {
         <Image src="/yumefess-icon.png" alt="Yumefess" width={64} height={64} />
       </div>
 
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">Yumefess Oshi Polling 2026</h1>
-      <p className="text-sm text-gray-400 mb-8">Hasil Polling</p>
+      <h1 className="text-2xl font-bold text-gray-900 mb-1 text-center">Yumefess Oshi Polling 2026</h1>
+      <p className="text-sm text-gray-400 mb-8 text-center">Hasil Polling</p>
 
       {/* About */}
       <h2 className="font-bold text-gray-900 mb-2">
@@ -90,7 +90,7 @@ export default function PollingResultsPage() {
       <p className="text-sm leading-relaxed mb-3">
         Kami mengadakan survei yang ditujukan kepada para yumejin (penggemar yang menikmati konten
         ocxcanon/self-insert/reader-insert) dengan meminta mereka merekomendasikan 1–3 karakter yang
-        merupakan atau pernah menjadi comfort character mereka. (Periode survei: 5–25 Maret 2026)
+        merupakan atau pernah menjadi comfort character mereka. (Periode survei: 8–25 Maret 2026)
       </p>
       <p className="text-sm leading-relaxed mb-8">
         Berdasarkan hasilnya, kami memperkenalkan <strong>30 karakter</strong> dan{' '}
@@ -126,7 +126,7 @@ export default function PollingResultsPage() {
         </li>
         <li>
           Jika kami menemukan komentar atau sikap yang menjelekkan, merendahkan, mendiskriminasi,
-          atau menimbulkan keributan, kami selaku admin <strong>@mlytfess</strong> berhak memblokir
+          atau menimbulkan keributan terkait dengan proyek ini, kami selaku admin <strong>@mlytfess</strong> berhak memblokir
           dan blacklist yang bertanggung jawab.
         </li>
       </ul>
